@@ -1,6 +1,7 @@
 package Catalyst::Model::WebService::CRUST;
 
 use strict;
+
 use base qw( WebService::CRUST Catalyst::Model );
 
 
@@ -33,7 +34,7 @@ Or make your own:
   use strict;
   use base 'Catalyst::Model::WebService::CRUST';
   
-  # Optionally set a base or other WebService::CRUST options
+  # Optionally set a base or any other WebService::CRUST options
   __PACKAGE__->config(
       base => 'http://something/'
   );
@@ -44,6 +45,12 @@ Or make your own:
 Then in your Catalyst app:
 
   $c->stash{result} = $c->model('MyService')->get('foo');
+  
+or if you like the autoload stuff:
+
+  $c->stash{foo} = $c->model('MyService')->foo;
+  $c->stash{bar} = $c->model('MyService')->post_bar(key => $val);
+
 
 =head1 SEE ALSO
 

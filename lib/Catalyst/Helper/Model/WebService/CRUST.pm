@@ -1,4 +1,4 @@
-package Catalyst::Helper::Model::WSSimple;
+package Catalyst::Helper::Model::WebService::CRUST;
 
 
 use strict;

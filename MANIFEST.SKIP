@@ -11,7 +11,7 @@
 \bpm_to_blib$
 \bblibdirs$
 ^MANIFEST\.SKIP$
-^WebService-Crust\.tmproj$
+^WebService-CRUST\.tmproj$
  
 # Avoid Module::Build generated and utility files.
 \bBuild$

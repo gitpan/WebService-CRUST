@@ -1,4 +1,10 @@
 Revision history for Perl module WebService::CRUST
 
+0.2 Mon May 07 18:32:00 2007
+    - Added debug code
+    - Cleaned up documentation
+    - Added additional requirements for building
+    - Removed ._ files
+
 0.1 Fri May 04 15:46:00 2007
     - Initial version
