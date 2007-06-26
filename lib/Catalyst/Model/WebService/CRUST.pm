@@ -44,12 +44,12 @@ Or make your own:
 
 Then in your Catalyst app:
 
-  $c->stash{result} = $c->model('MyService')->get('foo');
+  $c->stash->{result} = $c->model('MyService')->get('foo');
   
 or if you like the autoload stuff:
 
-  $c->stash{foo} = $c->model('MyService')->foo;
-  $c->stash{bar} = $c->model('MyService')->post_bar(key => $val);
+  $c->stash->{foo} = $c->model('MyService')->foo;
+  $c->stash->{bar} = $c->model('MyService')->post_bar(key => $val);
 
 
 =head1 SEE ALSO

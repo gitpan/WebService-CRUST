@@ -1,13 +1,16 @@
 package WebService::CRUST;
 
 use strict;
+
 use LWP;
 use HTTP::Cookies;
 use HTTP::Request::Common;
 use URI;
 use URI::QueryParam;
 
-our $VERSION = '0.2';
+use WebService::CRUST::Result;
+
+our $VERSION = '0.3';
 
 sub new {
     my ( $class, %opt ) = @_;
@@ -103,7 +106,7 @@ sub request {
 
     $self->debug( "Request Sent: %s", $res->message );
 
-    return $self->_format_response($res)
+    return WebService::CRUST::Result->new($self->_format_response($res), $self)
       if $res->is_success;
 
     return undef;
@@ -124,13 +127,15 @@ sub _format_response {
 }
 
 sub ua {
-    my ( $self, $ua ) = shift;
+    my ( $self, $ua ) = @_;
 
     # If they provided a UA set it
-    $ua and $self->{_ua} = $ua;
+    $ua and $self->{ua} = $ua;
 
     # If we already have a UA then return it
-    $self->{_ua} and return $self->{_ua};
+    $self->{ua} and return $self->{ua};
+
+    $self->debug("Creating new UA");
 
     # Otherwise create our own UA
     $ua = LWP::UserAgent->new;
@@ -140,7 +145,7 @@ sub ua {
     $ua->timeout( $self->{config}->{timeout} )
       if $self->{config}->{timeout};
 
-    $self->{_ua} = $ua;
+    $self->{ua} = $ua;
     return $ua;
 }
 
@@ -383,9 +388,20 @@ are equivalent:
 The pattern is $obj->(get|head|post|put)_methodname;
 
 
+Additionally, instead of accessing keys in a hash, you can call them as methods:
+
+   my $response = $w->foo(key => $val);
+   
+   # These are equivalent
+   $response->{bar}->{baz};
+   $response->bar->baz;
+
+If an element of your object returns with a key called "CRUST__Result", we will
+auto inflate to another URL.  See L<WebService::CRUST::Result> for more.
+
 =head1 SEE ALSO
 
-L<Catalyst::Model::WebService::CRUST>, L<LWP>, L<XML::Simple>
+L<WebService::CRUST::Result>, L<Catalyst::Model::WebService::CRUST>, L<LWP>, L<XML::Simple>
 
 =head1 AUTHOR
 
