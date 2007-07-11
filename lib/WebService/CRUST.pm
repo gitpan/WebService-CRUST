@@ -10,7 +10,10 @@ use URI::QueryParam;
 
 use WebService::CRUST::Result;
 
-our $VERSION = '0.3';
+our $VERSION = '0.4';
+
+
+
 
 sub new {
     my ( $class, %opt ) = @_;
@@ -26,6 +29,7 @@ sub new {
 
     return bless { config => \%opt }, $class;
 }
+
 
 sub get {
     my ( $self, $path, %h ) = @_;
@@ -108,6 +112,8 @@ sub request {
 
     return WebService::CRUST::Result->new($self->_format_response($res), $self)
       if $res->is_success;
+      
+    $self->debug( "Request was not successful" );
 
     return undef;
 }
@@ -201,7 +207,7 @@ Simple:
   my $url = 'http://developer.yahooapis.com/TimeService/V1/getTime';
   my $w = new WebService::CRUST;
 
-  print Dumper $w->get($url, appid => 'YahooDemo');
+  print $w->get($url, appid => 'YahooDemo')->Timestamp;
 
 Slightly more complex example, where we connect to Amazon and get a list of
 albums by the Magnetic Fields:
@@ -217,24 +223,24 @@ albums by the Magnetic Fields:
   my $result = $w->ItemSearch(
     SearchIndex => 'Music',
     Keywords => 'Magnetic Fields'
-  )->{Items};
+  );
 
-  for (@{$result->{Item}}) {
+  for (@{$result->Items->Item}) {
     printf "%s - %s\n", 
-      $_->{ASIN}, 
-      $_->{ItemAttributes}->{Title};
+      $_->ASIN, 
+      $_->ItemAttributes->Title;
   }
 
 
 =head1 CONSTRUCTOR
 
-=head2 new
+=item new
 
 my $w = new WebService::CRUST( <options> );
 
 =head1 OPTIONS
 
-=head2 base
+=item base
 
 Sets a base URL to perform actions on.  Example:
 
@@ -242,7 +248,7 @@ Sets a base URL to perform actions on.  Example:
   $w->get('foo'); # calls http://somehost.com/API/foo
   $w->foo;        # Same thing but AUTOLOADED
 
-=head2 params
+=item params
 
 Pass hashref of options to be sent with every query.  Example:
 
@@ -257,7 +263,7 @@ Or combine with base above to make your life easier:
   );
   $w->getTime(format => 'ms');
 
-=head2 request_key
+=item request_key
 
 Use a specific param argument for the action veing passed, for instance, when
 talking to Amazon, instead of calling /method you have to call ?Operation=method.
@@ -272,21 +278,24 @@ Here's some example code:
   $w->ItemLookup(ItemId => 'B00000JY1X');
   # does a GET on http://webservices.amazon.com/onca/xml?Service=AWSECommerceService&Operation=ItemLookup&ItemId=B00000JY1X&AWSAccessKeyId=my_key
 
-=head2 timeout
+=item timeout
 
 Number of seconds to wait for a request to return.  Default is L<LWP>'s
 default (180 seconds).
 
-=head2 ua
+=item ua
 
 Pass an L<LWP::UserAgent> object that you want to use instead of the default.
 
-=head2 format
+=item format
 
-What format to use.  Defaults to XML::Simple.  To use something like L<JSON>:
+What format to use.  Defaults to XML::Simple.  To use something like L<JSON>
+or L<JSON::XS>:
 
-  my $w = new WebService::CRUST(format => [ 'JSON', 'objToJson' ]);
-  $w->get($url);
+  my $w1 = new WebService::CRUST(format => [ 'JSON', 'objToJson' ]);
+  my $w2 = new WebService::CRUST(format => [ 'JSON::XS', 'decode' ]);
+  $w1->get($url);
+  $w2->get($url);
 
 The second argument can also be a coderef, so for instance:
 
@@ -298,11 +307,11 @@ The second argument can also be a coderef, so for instance:
 Formatter classes are loaded dynamically if needed, so you don't have to 'use'
 them first.
 
-head2 basic_username
+=item basic_username
 
 The HTTP_BASIC username to send for authentication
 
-head2 basic_password
+=item basic_password
 
 The HTTP_BASIC password to send for authentication
 
@@ -312,47 +321,52 @@ The HTTP_BASIC password to send for authentication
   );
   $w->get('http://something/');
 
-=head2 opts
+=item opts
 
 A hashref of alternate options to pass the data formatter.
 
-=head2 debug
+=item debug
 
 Turn debugging on or off.
 
 =head1 METHODS
 
-=head2 get
+=item get
 
-Performs a GET request with the specified options.  Returns undef on failure.
+Performs a GET request with the specified options.  Returns a
+WebService::CRUST::Result object on success or undef on failure.
 
-=head2 head
+=item head
 
-Performs a HEAD request with the specified options.  Returns undef on failure.
+Performs a HEAD request with the specified options.  Returns a
+WebService::CRUST::Result object on success or undef on failure.
 
-=head2 put
 
-Performs a PUT request with the specified options.  Returns undef on failure.
+=item put
+
+Performs a PUT request with the specified options.  Returns a
+WebService::CRUST::Result object on success or undef on failure.
 
 If -content is passed as a parameter, that will be set as the content of the
 PUT request:
 
   $w->put('something', { -content => $content });
 
-=head2 post
+=item post
 
-Performs a POST request with the specified options.  Returns undef on failure.
+Performs a POST request with the specified options.  Returns a
+WebService::CRUST::Result object on success or undef on failure.
 
-=head2 request
+=item request
 
 Same as get/post except the first argument is the method to use.
 
   my $w = new WebService::CRUST;
   $w->request( 'HEAD', $url );
 
-Returns undef on failure.
+Returns a WebService::CRUST::Result object on success or undef on failure.
 
-=head2 response
+=item response
 
 The L<HTTP::Response> of the last request.
 
@@ -361,11 +375,11 @@ The L<HTTP::Response> of the last request.
   
   $w->get('invalid_action') or die $w->response->status_line;
 
-=head2 ua
+=item ua
 
 Get or set the L<LWP::UserAgent> object.
 
-=head2 debug
+=item debug
 
 Mostly internal method for debugging.  Prints a message to STDERR by default.
 
@@ -398,6 +412,37 @@ Additionally, instead of accessing keys in a hash, you can call them as methods:
 
 If an element of your object returns with a key called "CRUST__Result", we will
 auto inflate to another URL.  See L<WebService::CRUST::Result> for more.
+
+=head1 DEBUGGING
+
+Results from a request come back as an L<WebService::CRUST::Result> object.
+If you want to look at what came back (so you know what methods to request),
+just dump the result's ->request accessor:
+
+    my $w = new WebService::CRUST(base => 'http://something/');
+    my $result = $w->method;
+    
+    # What does my result contain?
+    print Dumper $result->result;
+    
+    # Returns: { attr => 'value' }
+    # Ah... my result has an attribute called 'attr'
+
+    $result->attr; # 'value'
+
+=head1 COMPATIBILITY
+
+Changes in 0.3 and 0.4 broke compatibility with previous releases (where you
+could just access the result as a hash directly).  If you had code that looked
+like this:
+
+    my $x = $crust->foo;
+    $x->{attr};
+    
+You'll need to change it to one of these:
+
+    $x->result->{attr};
+    $x->attr;
 
 =head1 SEE ALSO
 
