@@ -3,7 +3,7 @@ use base qw(Class::Accessor);
 
 use strict;
 
-our $VERSION = '0.4';
+our $VERSION = '0.5';
 
 
 __PACKAGE__->mk_accessors(qw(
@@ -45,7 +45,7 @@ sub AUTOLOAD {
     return if $AUTOLOAD =~ /::DESTROY$/;
 
     ( my $method = $AUTOLOAD ) =~ s/.*:://s;
-
+    
     return unless $self->result and defined $self->result->{$method};
         
     my $result = $self->result->{$method};
@@ -53,49 +53,25 @@ sub AUTOLOAD {
     $self->{_cache}->{$method} and return $self->{_cache}->{$method};
 
     if (ref $result eq 'HASH') {
-        # Inflate pointers to other CRUST objects
-        if (exists $result->{'CRUST__Result'}) {
-
-            my $crust = $self->crust
-                ? $self->crust
-                : new WebService::CRUST;
-
-            my $href   = new URI($result->{href});
-            my $action = $result->{CRUST__Result};
-            
-            my %args = %{$result->{args}};
-
-            my $full_href = $crust->response
-                ? $href->abs($crust->response->base)
-                : $href;
-
-            my $r = $crust->request(
-                $action,
-                $full_href,
-                %args
-            );
-
-            $self->{_cache}->{$method} = $r;
-        }
-        else {
-            $self->{_cache}->{$method} = WebService::CRUST::Result->new(
-                $result, $self->crust
-            );
-        }
+        $self->{_cache}->{$method} = $self->follow_result($result);
     }
     elsif (ref $result eq 'ARRAY') {
         my @results = @$result;
 
-        if ($results[1]) {
-            my @response;
-            foreach my $r (@results) {
-                push @response, WebService::CRUST::Result->new($r, $self->crust);
-            }
-            return wantarray ? @response : \@response;
+        my @response;
+        foreach my $r (@results) {
+            push @response, $self->follow_result($r);
         }
-        else {
-            return WebService::CRUST::Result->new(shift @results, $self->crust);
+
+        if ($response[1]) {
+            wantarray and return @response;
+            $self->{_cache}->{$method} = \@response;
         }
+        $response[1] and wantarray and return wantarray
+            ? @response
+            : \@response;
+        
+        $self->{_cache}->{$method} = shift @response;
     }
     else {
         $self->{_cache}->{$method} = $result;
@@ -103,6 +79,34 @@ sub AUTOLOAD {
 
     return $self->{_cache}->{$method};
 }
+
+
+sub follow_result {
+    my ($self, $result) = @_;
+    
+    if (exists $result->{'CRUST__Result'}) {
+        my $href   = new URI($result->{href});
+        my $action = $result->{CRUST__Result};
+    
+        my %args = %{$result->{args}};
+
+        my $full_href = $self->crust->response
+            ? $href->abs($self->crust->response->base)
+            : $href;
+
+        my $r = $self->crust->request(
+            $action,
+            $full_href,
+            %args
+        );
+        
+        return $r;
+    }
+    else {
+        return new WebService::CRUST::Result($result, $self->crust);
+    }
+}
+
 
 
 1;

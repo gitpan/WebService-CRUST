@@ -10,7 +10,7 @@ use URI::QueryParam;
 
 use WebService::CRUST::Result;
 
-our $VERSION = '0.4';
+our $VERSION = '0.5';
 
 
 
