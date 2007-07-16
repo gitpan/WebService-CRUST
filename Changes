@@ -1,5 +1,8 @@
 Revision history for Perl module WebService::CRUST
 
+0.6 Mon Jul 16 13:28:00 2007
+    - Ditched CRUST__Request in favor of xlink:hrefs
+    - Serialize PUT hashes
 0.5 Sun Jul 15 15:03:00 2007
     - Better array handling - PUT serialization coming soon.
 0.4 Wed Jul 11 11:09:00 2007

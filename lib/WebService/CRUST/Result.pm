@@ -3,7 +3,7 @@ use base qw(Class::Accessor);
 
 use strict;
 
-our $VERSION = '0.5';
+our $VERSION = '0.6';
 
 
 __PACKAGE__->mk_accessors(qw(
@@ -84,15 +84,20 @@ sub AUTOLOAD {
 sub follow_result {
     my ($self, $result) = @_;
     
-    if (exists $result->{'CRUST__Result'}) {
-        my $href   = new URI($result->{href});
-        my $action = $result->{CRUST__Result};
-    
-        my %args = %{$result->{args}};
+    if (exists $result->{'xlink:href'}) {
+        my $href   = new URI($result->{'xlink:href'});
+        
+        my $action = exists $result->{action}
+            ? $result->{action}
+            : 'GET';
 
         my $full_href = $self->crust->response
             ? $href->abs($self->crust->response->base)
             : $href;
+
+        my %args = exists $result->{args}
+            ? %{$result->{args}}
+            : ();
 
         my $r = $self->crust->request(
             $action,
@@ -156,14 +161,13 @@ If the value is scalar it will just be returned as is.
 =head1 INFLATION
 
 If the value passed to new is a hash reference with a key called
-"CRUST__Result" then this module will look for keys called "args" and "href"
+"xlink:href" then this module will look for keys called "args" and "href"
 and use them to construct a new request when that value is queried.  For
 instance, assume this piece of XML is consumed by a WebService::CRUST object:
 
     <book name="So Long and Thank For All The Fish">
-        <author CRUST__Result="GET">
+        <author xlink:href="http://someservice/author">
             <args first="Douglas" last="Adams" />
-            <href>http://someservice/author</href>
         </author>
         <price>42.00</price>
     </book>

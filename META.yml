@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                WebService-CRUST
-version:             0.5
+version:             0.6
 abstract:            A lightweight Client for making REST calls
 license:             ~
 generated_by:        ExtUtils::MakeMaker version 6.36

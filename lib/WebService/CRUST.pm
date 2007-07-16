@@ -10,7 +10,7 @@ use URI::QueryParam;
 
 use WebService::CRUST::Result;
 
-our $VERSION = '0.5';
+our $VERSION = '0.6';
 
 
 
@@ -19,7 +19,7 @@ sub new {
     my ( $class, %opt ) = @_;
 
     # Set a default formatter
-    $opt{format} or $opt{format} = [ 'XML::Simple', 'XMLin' ];
+    $opt{format} or $opt{format} = [ 'XML::Simple', 'XMLin', 'XMLout' ];
 
     # Backwards compatibility
     $opt{query} and $opt{params} = $opt{query};
@@ -86,6 +86,12 @@ sub request {
         $self->debug( "%s: %s", $method, $uri->as_string );
 
         my $content = delete $send->{-content};
+        
+        # If our content is a hash, then serialize it
+        if (ref $content) {
+            $content = $self->_format_request($content);
+        }
+        
         $self->_add_param( $uri, $send );
         $req = HTTP::Request->new( $method, $uri );
         $content and $req->add_content($content);
@@ -130,6 +136,18 @@ sub _format_response {
 
     my $o = $class->new( %{ $self->{config}->{opts} } );
     return $o->$method( $res->content );
+}
+sub _format_request {
+    my ( $self, $req, $format ) = @_;
+    
+    $format or $format = $self->{config}->{format};
+    
+    my ($class, $deserialize, $method) = @$format;
+    
+    ref $method eq 'CODE' and return &$method( $req );
+    
+    my $o = $class->new( %{ $self->{config}->{opts} } );
+    return $o->$method( $req );
 }
 
 sub ua {
@@ -292,12 +310,13 @@ Pass an L<LWP::UserAgent> object that you want to use instead of the default.
 What format to use.  Defaults to XML::Simple.  To use something like L<JSON>
 or L<JSON::XS>:
 
-  my $w1 = new WebService::CRUST(format => [ 'JSON', 'objToJson' ]);
-  my $w2 = new WebService::CRUST(format => [ 'JSON::XS', 'decode' ]);
+  my $w1 = new WebService::CRUST(format => [ 'JSON', 'objToJson', 'jsonToObj' ]);
+  my $w2 = new WebService::CRUST(format => [ 'JSON::XS', 'decode', 'encode', 'decode' ]);
   $w1->get($url);
   $w2->get($url);
 
-The second argument can also be a coderef, so for instance:
+The second and third arguments are the methods to serialize or deserialize.
+Either one can also be a coderef, so for instance:
 
   my $w = new WebService::CRUST(
       format => [ 'JSON::Syck', sub { JSON::Syck::Load(shift) } ]
@@ -351,6 +370,9 @@ If -content is passed as a parameter, that will be set as the content of the
 PUT request:
 
   $w->put('something', { -content => $content });
+  
+If that content is a reference to a hash or array, it will be serialized
+using the formatter specified.
 
 =item post
 
@@ -410,8 +432,8 @@ Additionally, instead of accessing keys in a hash, you can call them as methods:
    $response->{bar}->{baz};
    $response->bar->baz;
 
-If an element of your object returns with a key called "CRUST__Result", we will
-auto inflate to another URL.  See L<WebService::CRUST::Result> for more.
+If an element of your object returns with a key called "xlink:href", we will
+auto inflate that to another URL.  See L<WebService::CRUST::Result> for more.
 
 =head1 DEBUGGING
 
