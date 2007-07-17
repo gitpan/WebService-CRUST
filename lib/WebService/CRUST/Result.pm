@@ -3,7 +3,7 @@ use base qw(Class::Accessor);
 
 use strict;
 
-our $VERSION = '0.6';
+our $VERSION = '0.7';
 
 
 __PACKAGE__->mk_accessors(qw(
@@ -63,15 +63,8 @@ sub AUTOLOAD {
             push @response, $self->follow_result($r);
         }
 
-        if ($response[1]) {
-            wantarray and return @response;
-            $self->{_cache}->{$method} = \@response;
-        }
-        $response[1] and wantarray and return wantarray
-            ? @response
-            : \@response;
-        
-        $self->{_cache}->{$method} = shift @response;
+        wantarray and return @response;
+        $self->{_cache}->{$method} = \@response;
     }
     else {
         $self->{_cache}->{$method} = $result;
@@ -153,8 +146,6 @@ If the value is a hash ref, it will be returned as another Result object;
 If the value is an array ref, it will be returned as an array of Result
 objects, or as a ref to the array depending on the context in which it was
 called.
-
-If the value is an array ref with only one element, that element is returned.
 
 If the value is scalar it will just be returned as is.
 
